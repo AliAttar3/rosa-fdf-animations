@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ROSA storage: EBS only</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", system-ui, sans-serif; margin: 0; background: #f4f5f7; color: #1f2328; }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 20px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: #57606a; font-size: 13px; margin-bottom: 14px; }
+  .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+  button, select { font: inherit; font-size: 13px; padding: 6px 12px; border: 1px solid #c9ced6; background: #fff; border-radius: 6px; cursor: pointer; }
+  button.active { background: #3b82d4; color: #fff; border-color: #3b82d4; }
+  button:disabled { background: #eef0f3; color: #a0a7b2; border-color: #e1e4e8; cursor: not-allowed; }
+  .spacer { flex: 1; }
+  svg { width: 100%; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; display: block; }
+  #cap { margin-top: 10px; padding: 12px 14px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; min-height: 48px; font-size: 14px; line-height: 1.5; }
+  #cap b { color: #3b82d4; }
+  .note { font-size: 12px; color: #57606a; margin-top: 10px; line-height: 1.5; }
+
+  .az { fill: #f7f8fa; stroke: #b6bcc6; stroke-width: 1.5; stroke-dasharray: 6 4; transition: fill .5s, stroke .5s; }
+  .fail .az { fill: #fdecec; stroke: #d64545; stroke-dasharray: none; }
+  .azlabel { font-size: 13px; font-weight: 600; fill: #1f2328; text-anchor: middle; }
+  .node { fill: #fff; stroke: #8b95a3; stroke-width: 1.2; }
+  .nodelabel { font-size: 11px; fill: #57606a; text-anchor: middle; }
+  .osd { fill: #efe9fb; stroke: #7c5cd8; stroke-width: 1.2; transition: opacity .5s; }
+  .osdt { font-size: 11px; fill: #4b3a8f; text-anchor: middle; font-weight: 600; }
+  .ebs { fill: #fff4e0; stroke: #d98a00; stroke-width: 1.5; }
+  .ebst { font-size: 11px; fill: #8a5a00; text-anchor: middle; font-weight: 600; }
+  .link { stroke: #b6bcc6; stroke-width: 1.5; stroke-dasharray: 3 3; }
+  .data { fill: #3b82d4; opacity: 0; transition: opacity .5s; }
+  .down .node, .down .osd, .down .ebs, .down .link, .down .data { opacity: .35; }
+  .down .osd { opacity: .35; }
+  .big { font-size: 28px; font-weight: 700; fill: #d64545; text-anchor: middle; opacity: 0; transition: opacity .4s; }
+  .fail .big { opacity: 1; }
+  .badge { font-size: 11.5px; text-anchor: middle; fill: #57606a; }
+  .badge.bad { fill: #b42318; font-weight: 600; }
+  .badge.warn { fill: #9a6700; font-weight: 600; }
+  .badge.good { fill: #1a7f37; font-weight: 600; }
+  .none { font-size: 11px; fill: #9aa3af; text-anchor: middle; font-style: italic; }
+
+  .pd { transition: transform .9s ease-in-out, opacity .5s; }
+  .pd rect { stroke-width: 1.5; transition: fill .4s, stroke .4s; }
+  .pd.run rect { fill: #dcf5e3; stroke: #1a7f37; }
+  .pd.dead rect { fill: #f1c7c7; stroke: #d64545; }
+  .pd.pend rect { fill: #fff1cc; stroke: #d98a00; }
+  .podt { font-size: 12px; font-weight: 600; text-anchor: middle; fill: #1f2328; }
+  .pods { font-size: 10px; text-anchor: middle; fill: #57606a; }
+  .pkt { stroke: #fff; stroke-width: 1.5; }
+  .pkt.w { fill: #3b82d4; }
+  .pkt.r { fill: #7c5cd8; }
+  .pkt.a { fill: #1a7f37; }
+  .x { font-size: 20px; font-weight: 700; fill: #d64545; text-anchor: middle; }
+  .region { font-size: 12px; fill: #57606a; font-weight: 600; }
+  .eg { transition: opacity .5s; }
+  .data.nw { fill: #d98a00; }
+  .stbox { fill: #f7f8fa; stroke: #8b95a3; stroke-width: 1.2; }
+  .stt { font-size: 12px; font-weight: 600; fill: #1f2328; text-anchor: middle; }
+  .sg { transition: opacity .5s; }
+  .sg.down { opacity: .35; }
+  .item { transition: opacity .5s; }
+  .snap { fill: #e3f0fc; stroke: #3b82d4; stroke-width: 1.2; }
+  .snapt { font-size: 11px; fill: #1d4f87; text-anchor: middle; font-weight: 600; }
+  .mt { fill: #e8f6ee; stroke: #1a7f37; stroke-width: 1.2; }
+  .mtt { font-size: 11px; fill: #14532d; text-anchor: middle; font-weight: 600; }
+  code { background: #eef0f3; padding: 0 4px; border-radius: 3px; font-size: 12.5px; }
+  .clientbox { fill: #f7f8fa; stroke: #8b95a3; stroke-width: 1.2; }
+  .lbbox { fill: #e8f1fb; stroke: #3b82d4; stroke-width: 1.5; }
+  .lbt { font-size: 12px; font-weight: 600; fill: #1d4f87; text-anchor: middle; }
+  .lbn { font-size: 12px; fill: #57606a; }
+  .lbn.good { fill: #1a7f37; font-weight: 600; }
+  .lbn.warn { fill: #9a6700; font-weight: 600; }
+  .lbn.bad { fill: #b42318; font-weight: 600; }
+  .lbl { fill: none; stroke: #1a7f37; stroke-width: 1.5; }
+  .lbl.dead { stroke: #d64545; stroke-dasharray: 5 4; }
+  .lbl.idle { stroke: #b6bcc6; stroke-dasharray: 3 3; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>EBS only</h1>
+  <div class="sub">What happens to persistent data on a native EBS volume when an availability zone (AZ) fails. Auto-plays, or switch to click-through.</div>
+  <div class="bar">
+    <span class="spacer"></span>
+    <button id="md">Mode: Auto-play</button>
+    <button id="pv" disabled>&#9664; Previous</button>
+    <button id="nx" disabled>Next &#9654;</button>
+    <button id="pp">Pause</button>
+    <button id="rs">Restart</button>
+    <label style="font-size:13px">Speed
+      <select id="sp"><option value="0.5">0.5x</option><option value="1" selected>1x</option><option value="2">2x</option></select>
+    </label>
+  </div>
+  <svg id="svg" viewBox="0 0 960 480"></svg>
+  <div id="cap"></div>
+  <div class="note" id="note"></div>
+</div>
+
+<script>
+const svg = document.getElementById('svg');
+const cap = document.getElementById('cap');
+const NS = 'http://www.w3.org/2000/svg';
+let scene = 1, paused = false, speed = 1, token = 0;
+
+const azx = i => 20 + 315 * i;
+const cx = i => azx(i) + 147;      // EBS centre
+const ox = i => azx(i) + 207;      // OSD centre
+const zones = ['us-east-1a', 'us-east-1b', 'us-east-1c'];
+
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function wait(ms) {
+  const my = token; let t = 0;
+  if (skipping || ffwd) { if (my !== token) throw 'cancel'; return; }
+  while (t < ms) {
+    await sleep(40);
+    if (my !== token) throw 'cancel';
+    if (ffwd) break;
+    if (!paused) t += 40 * speed;
+  }
+  if (my !== token) throw 'cancel';
+}
+function say(html) { cap.innerHTML = html; }
+
+// Pause between steps: timed in auto mode, waits for "Next" in click-through mode.
+// "Previous" re-runs the scene, fast-forwarding (skipping = true) past the first
+// `skipLeft` pauses with no animation, then plays normally up to the target pause.
+let stepMode = false, release = null;
+let ffwd = false;   // Next pressed mid-step: finish the current step instantly
+let skipping = false, skipLeft = 0;
+let idx = 0;   // pauses reached so far in this run
+let cur = 0;   // pauses the viewer has passed (the pause they are at, or the end)
+function setCur(v) { cur = v; updateNav(); }
+async function dwell(ms) {
+  const j = idx++;
+  if (skipLeft > 0) { skipLeft--; if (skipLeft === 0) skipping = false; setCur(j + 1); return; }
+  setCur(j);
+  ffwd = false;   // the step is complete; wait here for the next click
+  if (!stepMode) { await wait(ms); setCur(j + 1); return; }
+  const my = token;
+  let mine;
+  await new Promise(r => { mine = r; release = r; });
+  if (my !== token) throw 'cancel';   // superseded by a newer run; leave its state alone
+  if (release === mine) release = null;
+  setCur(j + 1);
+}
+function next() {
+  if (release) release();
+  else if (stepMode && !finished) ffwd = true;
+}
+function prev() { if (stepMode) run(Math.max(0, cur - 1)); }
+
+const ST = 521;   // vertical centre of items in the storage box at the bottom
+
+const podG = (id, x, y, title, state, st, hidden, w = 100) =>
+  `<g id="${id}" class="pd ${state}" style="transform:translate(${x}px,${y}px);${hidden ? 'opacity:0' : ''}">
+      <rect width="${w}" height="44" rx="6"/>
+      <text class="podt" id="${id}t" x="${w / 2}" y="20">${title}</text>
+      <text class="pods" id="${id}s" x="${w / 2}" y="35">${st}</text>
+    </g>`;
+const item = (id, mid, y, w, label) =>
+  `<g id="${id}" class="item" style="opacity:0"><rect class="snap" x="${mid - w / 2}" y="${y}" width="${w}" height="26" rx="4"/><text class="snapt" x="${mid}" y="${y + 17}">${label}</text></g>`;
+
+const PODS1 = [['pod', 0, 'App pod']];
+const CFG = {
+  1: { h: 480, ebs: [1, 0, 0], none: 1, pods: PODS1,
+       note: 'Simplified model: three AZs, one worker node each. An EBS volume lives in one AZ, and AWS replicates it only inside that AZ.' },
+};
+
+// Scene 12 layout: three pods per node, the OSD under the ODF workloads, and two kinds of EBS volume.
+const MIXED_PODS = [
+  ['d0', azx(0) + 18, 118, 'Database', 'Native EBS'],
+  ['d1', azx(1) + 18, 118, 'Database', 'Native EBS'],
+  ['d2', azx(2) + 18, 118, 'Database', 'Native EBS'],
+  ['lg', azx(0) + 106, 118, 'Legacy app', 'ODF RBD'],
+  ['sh0', azx(0) + 194, 118, 'Shared app', 'ODF CephFS'],
+  ['sh2', azx(2) + 194, 118, 'Shared app', 'ODF CephFS']
+];
+function mixedAz(i) {
+  const x = azx(i), n = x + 59, o = x + 191;
+  const cyl = (c, id, label) => `<path class="ebs" d="M${c - 55},330 v50 a55,12 0 0 0 110,0 v-50 a55,12 0 0 0 -110,0 a55,12 0 0 0 110,0"/>
+      <rect class="data" id="${id}" x="${c - 18}" y="353" width="36" height="16" rx="3"/>
+      <text class="ebst" x="${c}" y="404">${label}</text>`;
+  return `<g id="az${i}">
+      <rect class="az" x="${x}" y="50" width="295" height="440" rx="10"/>
+      <text class="azlabel" x="${x + 147}" y="74">${zones[i]}</text>
+      <rect class="node" x="${x + 10}" y="88" width="275" height="170" rx="6"/>
+      <text class="nodelabel" x="${x + 147}" y="106">ROSA worker node</text>
+      <rect class="osd" x="${x + 106}" y="190" width="170" height="44" rx="5"/>
+      <text class="osdt" x="${o}" y="209">Ceph OSD (ODF)</text>
+      <text class="osdt" x="${o}" y="224" style="font-weight:400">serves RBD and CephFS</text>
+      <line class="link" x1="${n}" y1="162" x2="${n}" y2="318"/>
+      <line class="link" x1="${o}" y1="234" x2="${o}" y2="318"/>
+      ${cyl(n, 'nb' + i, 'Native EBS (gp3)')}
+      ${cyl(o, 'blk' + i, 'EBS for ODF (gp3)')}
+      <text class="big" x="${x + 147}" y="300">AZ OUTAGE</text>
+      <text class="badge" id="badge${i}" x="${x + 147}" y="440"></text>
+      <text class="badge" id="badgeb${i}" x="${x + 147}" y="460"></text>
+    </g>`;
+}
+
+function build() {
+  const c = CFG[scene];
+  svg.setAttribute('viewBox', `0 0 960 ${c.h + (c.lb ? 70 : 0)}`);
+  $('note').textContent = c.note;
+  let h = (c.lb ? '<g transform="translate(0,70)">' : '') + '<text class="region" x="20" y="36">AWS Region us-east-1</text><g id="layer-az">';
+  for (let i = 0; i < 3; i++) {
+    if (c.mixed) { h += mixedAz(i); continue; }
+    const x = azx(i), cc = cx(i);
+    h += `<g id="az${i}">
+      <rect class="az" x="${x}" y="50" width="295" height="415" rx="10"/>
+      <text class="azlabel" x="${x + 147}" y="74">${zones[i]}</text>
+      <rect class="node" x="${x + 15}" y="95" width="265" height="130" rx="6"/>
+      <text class="nodelabel" x="${x + 147}" y="115">ROSA worker node</text>`;
+    if (c.odf || (c.oadp && i === 1)) {
+      h += `<rect class="osd" x="${x + 150}" y="150" width="115" height="44" rx="5"/>
+      <text class="osdt" x="${ox(i)}" y="170">${c.odf ? 'Ceph OSD' : 'OADP'}</text>
+      <text class="osdt" x="${ox(i)}" y="184" style="font-weight:400">${c.odf ? '(ODF)' : '(Velero)'}</text>`;
+    }
+    if (c.mt) {
+      h += `<line class="link" x1="${cc}" y1="225" x2="${cc}" y2="300"/>
+      <rect class="mt" x="${cc - 60}" y="300" width="120" height="40" rx="6"/>
+      <text class="mtt" x="${cc}" y="324">EFS mount target</text>`;
+    }
+    h += `<g id="ebsg${i}" class="eg" style="opacity:${c.ebs[i] ? 1 : 0}">
+      <line class="link" x1="${cc}" y1="225" x2="${cc}" y2="305"/>
+      <path class="ebs" d="M${cc - 55},315 v55 a55,12 0 0 0 110,0 v-55 a55,12 0 0 0 -110,0 a55,12 0 0 0 110,0"/>
+      <rect class="data" id="blk${i}" x="${cc - 42}" y="338" width="36" height="16" rx="3"/>
+      <rect class="data nw" id="nw${i}" x="${cc + 6}" y="338" width="36" height="16" rx="3"/>
+      <text class="ebst" x="${cc}" y="398">EBS volume (gp3)</text>
+    </g>`;
+    if (c.none) h += `<text class="none" id="none${i}" x="${cc}" y="345" style="opacity:${c.ebs[i] ? 0 : 1}">no volume in this AZ</text>`;
+    h += `<text class="big" x="${x + 147}" y="262">AZ OUTAGE</text>
+      <text class="badge" id="badge${i}" x="${x + 147}" y="430"></text>
+    </g>`;
+  }
+  h += '</g>';
+  if (c.lb) {
+    h += `<rect class="clientbox" x="20" y="-62" width="90" height="40" rx="6"/><text class="lbt" x="65" y="-38" style="fill:#1f2328">Clients</text>
+      <rect class="lbbox" x="330" y="-62" width="300" height="40" rx="6"/><text class="lbt" x="480" y="-38">AWS load balancer (NLB / ALB)</text>
+      <text class="lbn" id="lbnote" x="645" y="-37"></text>`;
+    for (let i = 0; i < 3; i++) h += `<polyline id="lb${i}" class="lbl" points="480,-22 ${azx(i) + 78},50 ${azx(i) + 78},95"/>`;
+  }
+  if (c.store) {
+    const w = c.dr ? 440 : 920, hh = c.dr ? 110 : 75;
+    h += `<g id="store" class="sg"><rect class="stbox" x="20" y="485" width="${w}" height="${hh}" rx="8"/>
+      <text class="stt" x="${20 + w / 2}" y="503">${c.store}</text>${c.items.join('')}</g>`;
+  }
+  if (c.dr) {
+    const x0 = c.store ? 500 : 20, w = c.store ? 440 : 920;
+    h += `<g id="r2" class="sg"><rect class="stbox" x="${x0}" y="485" width="${w}" height="110" rx="8"/>
+      <text class="stt" x="${x0 + w / 2}" y="503">${c.r2title || 'Region us-west-2 (disaster recovery)'}</text>${c.items2.join('')}</g>`;
+  }
+  h += '<g id="layer-x"></g><g id="layer-pk"></g>';
+  for (const [id, i, title, off = 28, hid] of c.pods) h += podG(id, azx(i) + off, 150, title, 'run', 'Running', hid);
+  if (c.mixed) for (const [id, px, py, title, st] of MIXED_PODS) h += podG(id, px, py, title, 'run', st, 0, 82);
+  if (c.dr) {
+    const [px, py] = c.podRpos || [810, 519];
+    h += podG('podR', px, py, c.podRtitle || 'Recovered pod', c.podRstate || 'run', c.podRtext || 'Running', !c.podRshow);
+  }
+  if (c.lb) h += '</g>';
+  svg.innerHTML = h;
+}
+
+function badge(i, text, cls) { const b = $('badge' + i); b.textContent = text; b.setAttribute('class', 'badge ' + (cls || '')); }
+function badgeb(i, text, cls) { const b = $('badgeb' + i); b.textContent = text; b.setAttribute('class', 'badge ' + (cls || '')); }
+function placePod(id, x, y) { $(id).style.transform = `translate(${x}px,${y}px)`; }
+function fail(i, on) { $('az' + i).classList.toggle('fail', on); $('az' + i).classList.toggle('down', on); }
+function failStore(on) { $('store').classList.toggle('down', on); }
+function show(id, on = true) { $(id).style.opacity = on ? 1 : 0; }
+function showBlk(i, on) { show('blk' + i, on); }
+function showNew(i, on) { show('nw' + i, on); }
+function spawnEbs(i) { show('ebsg' + i); show('none' + i, false); }
+function pod(state, text, id = 'pod') { $(id).setAttribute('class', 'pd ' + state); $(id + 's').textContent = text; }
+function lb(i, state) { $('lb' + i).setAttribute('class', 'lbl ' + state); }
+function lbNote(text, cls) { const n = $('lbnote'); n.textContent = text; n.setAttribute('class', 'lbn ' + (cls || '')); }
+function xmark(x, y) {
+  const t = document.createElementNS(NS, 'text');
+  t.setAttribute('class', 'x'); t.setAttribute('x', x); t.setAttribute('y', y); t.textContent = '\u2715';
+  $('layer-x').appendChild(t);
+}
+function podTitle(id, text) { $(id + 't').textContent = text; }
+function movePod(i, id = 'pod') { $(id).style.transform = `translate(${azx(i) + 28}px,150px)`; }
+const podPt = i => [azx(i) + 78, 194];
+
+// Move a dot along a polyline; every segment takes d ms.
+async function ship(points, cls, d = 450) {
+  if (skipping || ffwd) return;
+  const c = document.createElementNS(NS, 'circle');
+  c.setAttribute('r', 6); c.setAttribute('class', 'pkt ' + cls);
+  c.style.transition = 'none';
+  c.style.transform = `translate(${points[0][0]}px,${points[0][1]}px)`;
+  $('layer-pk').appendChild(c);
+  c.getBoundingClientRect();
+  for (let k = 1; k < points.length; k++) {
+    c.style.transition = `transform ${d / speed}ms linear`;
+    c.style.transform = `translate(${points[k][0]}px,${points[k][1]}px)`;
+    await wait(d);
+  }
+  c.remove();
+}
+const rev = p => p.slice().reverse();
+// OSD i -> OSD j, routed through the gap under the nodes
+const osdPath = (i, j) => [[ox(i), 194], [ox(i), 262], [ox(j), 262], [ox(j), 194]];
+const osdToEbs = i => [[ox(i), 194], [cx(i), 328]];
+const podToOsd = (p, o) => [podPt(p), [podPt(p)[0], 262], [ox(o), 262], [ox(o), 194]];
+
+/* ---------------- Scene 1: EBS only ---------------- */
+async function scene1() {
+  say('<b>1. Normal operation.</b> The app pod in <i>us-east-1a</i> writes to a PersistentVolume backed by an EBS volume. That volume exists in exactly one AZ.');
+  await dwell(2500);
+  await ship([podPt(0), [cx(0), 328]], 'w', 900);
+  showBlk(0, true);
+  badge(0, 'Data written to EBS', 'good');
+  await wait(1200);
+
+  say('<b>2. EBS durability is inside the AZ.</b> AWS replicates EBS data within its Availability Zone, which protects against hardware failure. It does not copy the volume to another AZ.');
+  badge(0, 'Replicated inside us-east-1a only', 'warn');
+  await dwell(4500);
+
+  say('<b>3. The AZ goes down.</b> The worker node, the pod and the EBS volume in us-east-1a are all unreachable.');
+  fail(0, true); pod('dead', 'AZ down');
+  badge(0, '', '');
+  await dwell(3000);
+
+  say('<b>4. Kubernetes reschedules the pod to us-east-1b.</b> The PV is pinned to us-east-1a, so a node in us-east-1b cannot attach it.');
+  movePod(1); await wait(1200);
+  pod('pend', 'Pending');
+  const [px, py] = podPt(1), tx = cx(0), ty = 328;
+  const l = document.createElementNS(NS, 'line');
+  l.setAttribute('x1', px); l.setAttribute('y1', py); l.setAttribute('x2', tx); l.setAttribute('y2', ty);
+  l.setAttribute('stroke', '#d64545'); l.setAttribute('stroke-width', 2); l.setAttribute('stroke-dasharray', '6 4');
+  $('layer-x').appendChild(l);
+  const t = document.createElementNS(NS, 'text');
+  t.setAttribute('class', 'x'); t.setAttribute('x', (px + tx) / 2); t.setAttribute('y', (py + ty) / 2 + 6); t.textContent = '\u2715';
+  $('layer-x').appendChild(t);
+  badge(1, 'Pending: volume node affinity conflict', 'bad');
+  await dwell(4500);
+
+  say('<b>Result:</b> the data is unavailable until us-east-1a recovers. EBS cannot follow the pod to another AZ. Protecting against this needs something on top of EBS, such as ODF or application-level replication.');
+}
+
+const SCENES = { 1: scene1 };
+
+// Next is enabled only in click-through mode and only while the scene has steps left.
+let finished = false;
+function updateNav() {
+  $('nx').disabled = !stepMode || finished;
+  $('pv').disabled = !stepMode || cur <= 0;
+}
+
+async function run(skip = 0) {
+  const my = ++token;
+  next();   // release any step still waiting on "Next" so it cancels
+  ffwd = false;
+  idx = 0; skipLeft = skip; skipping = skip > 0;
+  finished = false; setCur(0);
+  build();
+  try {
+    await SCENES[scene]();
+    if (my === token) { finished = true; updateNav(); }
+  } catch (e) { if (e !== 'cancel') throw e; }
+}
+
+$('rs').onclick = () => { paused = false; $('pp').textContent = 'Pause'; run(); };
+$('pp').onclick = () => { paused = !paused; $('pp').textContent = paused ? 'Play' : 'Pause'; };
+$('md').onclick = () => {
+  stepMode = !stepMode;
+  $('md').textContent = stepMode ? 'Mode: Click-through' : 'Mode: Auto-play';
+  updateNav();
+  $('pp').disabled = stepMode;
+  if (stepMode) { paused = false; $('pp').textContent = 'Pause'; }
+  if (!stepMode) next();
+};
+$('nx').onclick = next;
+$('pv').onclick = prev;
+document.addEventListener('keydown', e => {
+  if (!stepMode) return;
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); if (!finished) next(); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
+});
+$('sp').onchange = e => { speed = parseFloat(e.target.value); };
+run();
+</script>
+</body>
+</html>
