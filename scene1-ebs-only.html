@@ -82,10 +82,10 @@
   <div class="sub">What happens to persistent data on a native EBS volume when an availability zone (AZ) fails. Auto-plays, or switch to click-through.</div>
   <div class="bar">
     <span class="spacer"></span>
-    <button id="md">Mode: Auto-play</button>
+    <button id="md">Mode: Click-through</button>
     <button id="pv" disabled>&#9664; Previous</button>
     <button id="nx" disabled>Next &#9654;</button>
-    <button id="pp">Pause</button>
+    <button id="pp" disabled>Pause</button>
     <button id="rs">Restart</button>
     <label style="font-size:13px">Speed
       <select id="sp"><option value="0.5">0.5x</option><option value="1" selected>1x</option><option value="2">2x</option></select>
@@ -125,7 +125,7 @@ function say(html) { cap.innerHTML = html; }
 // Pause between steps: timed in auto mode, waits for "Next" in click-through mode.
 // "Previous" re-runs the scene, fast-forwarding (skipping = true) past the first
 // `skipLeft` pauses with no animation, then plays normally up to the target pause.
-let stepMode = false, release = null;
+let stepMode = true, release = null;   // click-through is the default mode
 let ffwd = false;   // Next pressed mid-step: finish the current step instantly
 let skipping = false, skipLeft = 0;
 let idx = 0;   // pauses reached so far in this run
