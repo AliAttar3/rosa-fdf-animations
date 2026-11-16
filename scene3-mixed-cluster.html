@@ -79,7 +79,7 @@
 <body>
 <div class="wrap">
   <h1>Mixed cluster</h1>
-  <div class="sub">One cluster with a self-replicating database on native EBS, plus a legacy app and a shared-files app on ODF, through an AZ failure. Auto-plays, or switch to click-through.</div>
+  <div class="sub">One cluster with a self-replicating database on native EBS, plus a legacy app and a shared-files app on FDF, through an AZ failure. Auto-plays, or switch to click-through.</div>
   <div class="bar">
     <span class="spacer"></span>
     <button id="md">Mode: Auto-play</button>
@@ -164,17 +164,17 @@ const item = (id, mid, y, w, label) =>
 const PODS1 = [['pod', 0, 'App pod']];
 const CFG = {
   12: { h: 505, mixed: 1, pods: [],
-        note: 'Simplified model: the database uses native EBS volumes (one per pod, from volumeClaimTemplates) and replicates in the application. The legacy app is a single pod on an ODF RBD volume (RWO). The shared-files app uses ODF CephFS (RWX) and must coordinate concurrent writes itself. ODF is replica 3 with failure domain = zone. Restart timing is about 5 minutes by default.' }
+        note: 'Simplified model: the database uses native EBS volumes (one per pod, from volumeClaimTemplates) and replicates in the application. The legacy app is a single pod on an FDF RBD volume (RWO). The shared-files app uses FDF CephFS (RWX) and must coordinate concurrent writes itself. FDF is replica 3 with failure domain = zone. Restart timing is about 5 minutes by default.' }
 };
 
-// Scene 12 layout: three pods per node, the OSD under the ODF workloads, and two kinds of EBS volume.
+// Scene 12 layout: three pods per node, the OSD under the FDF workloads, and two kinds of EBS volume.
 const MIXED_PODS = [
   ['d0', azx(0) + 18, 118, 'Database', 'Native EBS'],
   ['d1', azx(1) + 18, 118, 'Database', 'Native EBS'],
   ['d2', azx(2) + 18, 118, 'Database', 'Native EBS'],
-  ['lg', azx(0) + 106, 118, 'Legacy app', 'ODF RBD'],
-  ['sh0', azx(0) + 194, 118, 'Shared app', 'ODF CephFS'],
-  ['sh2', azx(2) + 194, 118, 'Shared app', 'ODF CephFS']
+  ['lg', azx(0) + 106, 118, 'Legacy app', 'FDF RBD'],
+  ['sh0', azx(0) + 194, 118, 'Shared app', 'FDF CephFS'],
+  ['sh2', azx(2) + 194, 118, 'Shared app', 'FDF CephFS']
 ];
 function mixedAz(i) {
   const x = azx(i), n = x + 59, o = x + 191;
@@ -187,12 +187,12 @@ function mixedAz(i) {
       <rect class="node" x="${x + 10}" y="88" width="275" height="170" rx="6"/>
       <text class="nodelabel" x="${x + 147}" y="106">ROSA worker node</text>
       <rect class="osd" x="${x + 106}" y="190" width="170" height="44" rx="5"/>
-      <text class="osdt" x="${o}" y="209">Ceph OSD (ODF)</text>
+      <text class="osdt" x="${o}" y="209">Ceph OSD (FDF)</text>
       <text class="osdt" x="${o}" y="224" style="font-weight:400">serves RBD and CephFS</text>
       <line class="link" x1="${n}" y1="162" x2="${n}" y2="318"/>
       <line class="link" x1="${o}" y1="234" x2="${o}" y2="318"/>
       ${cyl(n, 'nb' + i, 'Native EBS (gp3)')}
-      ${cyl(o, 'blk' + i, 'EBS for ODF (gp3)')}
+      ${cyl(o, 'blk' + i, 'EBS for FDF (gp3)')}
       <text class="big" x="${x + 147}" y="300">AZ OUTAGE</text>
       <text class="badge" id="badge${i}" x="${x + 147}" y="440"></text>
       <text class="badge" id="badgeb${i}" x="${x + 147}" y="460"></text>
@@ -215,7 +215,7 @@ function build() {
     if (c.odf || (c.oadp && i === 1)) {
       h += `<rect class="osd" x="${x + 150}" y="150" width="115" height="44" rx="5"/>
       <text class="osdt" x="${ox(i)}" y="170">${c.odf ? 'Ceph OSD' : 'OADP'}</text>
-      <text class="osdt" x="${ox(i)}" y="184" style="font-weight:400">${c.odf ? '(ODF)' : '(Velero)'}</text>`;
+      <text class="osdt" x="${ox(i)}" y="184" style="font-weight:400">${c.odf ? '(FDF)' : '(Velero)'}</text>`;
     }
     if (c.mt) {
       h += `<line class="link" x1="${cc}" y1="225" x2="${cc}" y2="300"/>
@@ -315,11 +315,11 @@ const lgToOsd = i => [[azx(i) + 147, 162], [azx(i) + 147, 205]];
 const shToOsd = i => [[azx(i) + 235, 162], [azx(i) + 235, 205]];
 
 async function scene12() {
-  say('<b>1. Setup.</b> One ROSA cluster, three kinds of workload, each on the storage that suits it. A <i>distributed database</i> (StatefulSet) uses native EBS and replicates itself. A <i>legacy single-instance app</i> and a <i>shared-files app</i> (two pods) use ODF on EBS.');
-  for (let i = 0; i < 3; i++) { badge(i, 'DB: its own native EBS volume', 'warn'); badgeb(i, 'ODF: replica ' + (i + 1) + ' of 3', 'warn'); }
+  say('<b>1. Setup.</b> One ROSA cluster, three kinds of workload, each on the storage that suits it. A <i>distributed database</i> (StatefulSet) uses native EBS and replicates itself. A <i>legacy single-instance app</i> and a <i>shared-files app</i> (two pods) use FDF on EBS.');
+  for (let i = 0; i < 3; i++) { badge(i, 'DB: its own native EBS volume', 'warn'); badgeb(i, 'FDF: replica ' + (i + 1) + ' of 3', 'warn'); }
   await dwell(5500);
 
-  say('<b>2. The database replicates itself.</b> db-0 (primary) writes to its native EBS volume and streams the change over the network to db-1 and db-2, which write to their own volumes. ODF is not involved.');
+  say('<b>2. The database replicates itself.</b> db-0 (primary) writes to its native EBS volume and streams the change over the network to db-1 and db-2, which write to their own volumes. FDF is not involved.');
   for (let i = 0; i < 3; i++) { badge(i, '', ''); badgeb(i, '', ''); }
   pod('run', 'Primary', 'd0'); pod('run', 'Replica', 'd1'); pod('run', 'Replica', 'd2');
   await ship([dbBot(0), dbEbs(0)], 'w', 600);
@@ -331,13 +331,13 @@ async function scene12() {
   for (let i = 0; i < 3; i++) badge(i, 'DB: copy ' + (i + 1) + ' of 3 stored', 'good');
   await dwell(3500);
 
-  say('<b>3. The ODF workloads write.</b> The legacy app and both shared-files pods write through ODF. Each write goes to a primary OSD (which can be in any AZ) and is replicated to the other two OSDs, each storing it on its own EBS volume. The shared-files app must coordinate its own concurrent writes.');
+  say('<b>3. The FDF workloads write.</b> The legacy app and both shared-files pods write through FDF. Each write goes to a primary OSD (which can be in any AZ) and is replicated to the other two OSDs, each storing it on its own EBS volume. The shared-files app must coordinate its own concurrent writes.');
   await Promise.all([ship(lgToOsd(0), 'w', 350), ship(shToOsd(0), 'w', 350), ship(shToOsd(2), 'w', 350)]);
   await Promise.all([ship(osdEbs12(0), 'w', 500), ship(oPath12(0, 1), 'r', 380), ship(oPath12(0, 2), 'r', 380)]);
   show('blk0');
   await Promise.all([ship(osdEbs12(1), 'r', 500), ship(osdEbs12(2), 'r', 500)]);
   show('blk1'); show('blk2');
-  for (let i = 0; i < 3; i++) badgeb(i, 'ODF: copy ' + (i + 1) + ' of 3 stored', 'good');
+  for (let i = 0; i < 3; i++) badgeb(i, 'FDF: copy ' + (i + 1) + ' of 3 stored', 'good');
   await dwell(3500);
 
   say('<b>4. us-east-1a goes down.</b> Everything in it is lost: db-0, the legacy app, one shared-files pod, one OSD and both of its EBS volumes. Each layer still has surviving copies in the other AZs.');
@@ -353,15 +353,15 @@ async function scene12() {
   await ship(shToOsd(2), 'w', 350);
   await Promise.all([ship(osdEbs12(2), 'w', 500), ship(oPath12(2, 1), 'r', 380)]);
   badge(1, 'DB: new primary, serving', 'good'); badge(2, 'DB: replica, in sync', 'good');
-  badgeb(1, 'ODF: 2 of 3 copies, degraded', 'warn'); badgeb(2, 'ODF: 2 of 3 copies, degraded', 'warn');
+  badgeb(1, 'FDF: 2 of 3 copies, degraded', 'warn'); badgeb(2, 'FDF: 2 of 3 copies, degraded', 'warn');
   await dwell(5000);
 
-  say('<b>6. The legacy app restarts.</b> After the eviction timeout (about 5 minutes by default) the scheduler starts it in us-east-1b. It attaches its ODF volume over the network and the data is intact on the surviving copies. This is the one workload with downtime.');
+  say('<b>6. The legacy app restarts.</b> After the eviction timeout (about 5 minutes by default) the scheduler starts it in us-east-1b. It attaches its FDF volume over the network and the data is intact on the surviving copies. This is the one workload with downtime.');
   placePod('lg', azx(1) + 106, 118); await wait(1200);
   pod('pend', 'Starting', 'lg');
   await ship(lgToOsd(1), 'r', 350);
   await ship(rev(lgToOsd(1)), 'a', 350);
-  pod('run', 'ODF RBD', 'lg');
+  pod('run', 'FDF RBD', 'lg');
   await dwell(4500);
 
   say('<b>7. The AZ recovers.</b> db-0 reattaches its own EBS volume and catches up from db-1 as a replica. The OSD rejoins and Ceph resyncs, and the shared-files pod is recreated. Both layers are healthy again.');
@@ -370,12 +370,12 @@ async function scene12() {
   await ship(dPath(1, 0), 'r', 420);
   pod('run', 'Replica', 'd0');
   await ship(oPath12(1, 0), 'r', 420);
-  pod('run', 'ODF CephFS', 'sh0');
+  pod('run', 'FDF CephFS', 'sh0');
   badge(0, 'DB: replica, in sync', 'good'); badge(1, 'DB: primary, serving', 'good'); badge(2, 'DB: replica, in sync', 'good');
-  badgeb(0, 'ODF: resynced', 'good'); badgeb(1, 'ODF: healthy, 3 of 3', 'good'); badgeb(2, 'ODF: healthy, 3 of 3', 'good');
+  badgeb(0, 'FDF: resynced', 'good'); badgeb(1, 'FDF: healthy, 3 of 3', 'good'); badgeb(2, 'FDF: healthy, 3 of 3', 'good');
   await dwell(4000);
 
-  say('<b>Result:</b> each workload gets the protection that fits it. The distributed database replicates itself on plain EBS and does not need ODF. ODF covers the apps that cannot replicate themselves or need shared files. The cost is running and understanding two storage models side by side.');
+  say('<b>Result:</b> each workload gets the protection that fits it. The distributed database replicates itself on plain EBS and does not need FDF. FDF covers the apps that cannot replicate themselves or need shared files. The cost is running and understanding two storage models side by side.');
 }
 
 const SCENES = { 12: scene12 };

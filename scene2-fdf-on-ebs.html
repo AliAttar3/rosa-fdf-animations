@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>ROSA storage: ODF on EBS</title>
+<title>ROSA storage: FDF on EBS</title>
 <style>
   body { font-family: -apple-system, "Segoe UI", system-ui, sans-serif; margin: 0; background: #f4f5f7; color: #1f2328; }
   .wrap { max-width: 1000px; margin: 0 auto; padding: 20px; }
@@ -78,8 +78,8 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>ODF on EBS</h1>
-  <div class="sub">How OpenShift Data Foundation (ODF) replicates data across AZs on top of EBS volumes, and what happens when an AZ fails. Auto-plays, or switch to click-through.</div>
+  <h1>FDF on EBS</h1>
+  <div class="sub">How IBM Fusion Data Foundation (FDF) replicates data across AZs on top of EBS volumes, and what happens when an AZ fails. Auto-plays, or switch to click-through.</div>
   <div class="bar">
     <span class="spacer"></span>
     <button id="md">Mode: Auto-play</button>
@@ -164,17 +164,17 @@ const item = (id, mid, y, w, label) =>
 const PODS1 = [['pod', 0, 'App pod']];
 const CFG = {
   2: { h: 480, odf: 1, ebs: [1, 1, 1], pods: PODS1,
-       note: 'Simplified model: three AZs, one worker node each. The pool uses replica 3 with failure domain = zone, so one copy of each object lives in each AZ. Cross-AZ synchronous replication adds write latency, and ODF needs at least three nodes spread across three AZs. Every write is stored on all three volumes, so each EBS volume must be sized for the full write rate.' },
+       note: 'Simplified model: three AZs, one worker node each. The pool uses replica 3 with failure domain = zone, so one copy of each object lives in each AZ. Cross-AZ synchronous replication adds write latency, and FDF needs at least three nodes spread across three AZs. Every write is stored on all three volumes, so each EBS volume must be sized for the full write rate.' },
 };
 
-// Scene 12 layout: three pods per node, the OSD under the ODF workloads, and two kinds of EBS volume.
+// Scene 12 layout: three pods per node, the OSD under the FDF workloads, and two kinds of EBS volume.
 const MIXED_PODS = [
   ['d0', azx(0) + 18, 118, 'Database', 'Native EBS'],
   ['d1', azx(1) + 18, 118, 'Database', 'Native EBS'],
   ['d2', azx(2) + 18, 118, 'Database', 'Native EBS'],
-  ['lg', azx(0) + 106, 118, 'Legacy app', 'ODF RBD'],
-  ['sh0', azx(0) + 194, 118, 'Shared app', 'ODF CephFS'],
-  ['sh2', azx(2) + 194, 118, 'Shared app', 'ODF CephFS']
+  ['lg', azx(0) + 106, 118, 'Legacy app', 'FDF RBD'],
+  ['sh0', azx(0) + 194, 118, 'Shared app', 'FDF CephFS'],
+  ['sh2', azx(2) + 194, 118, 'Shared app', 'FDF CephFS']
 ];
 function mixedAz(i) {
   const x = azx(i), n = x + 59, o = x + 191;
@@ -187,12 +187,12 @@ function mixedAz(i) {
       <rect class="node" x="${x + 10}" y="88" width="275" height="170" rx="6"/>
       <text class="nodelabel" x="${x + 147}" y="106">ROSA worker node</text>
       <rect class="osd" x="${x + 106}" y="190" width="170" height="44" rx="5"/>
-      <text class="osdt" x="${o}" y="209">Ceph OSD (ODF)</text>
+      <text class="osdt" x="${o}" y="209">Ceph OSD (FDF)</text>
       <text class="osdt" x="${o}" y="224" style="font-weight:400">serves RBD and CephFS</text>
       <line class="link" x1="${n}" y1="162" x2="${n}" y2="318"/>
       <line class="link" x1="${o}" y1="234" x2="${o}" y2="318"/>
       ${cyl(n, 'nb' + i, 'Native EBS (gp3)')}
-      ${cyl(o, 'blk' + i, 'EBS for ODF (gp3)')}
+      ${cyl(o, 'blk' + i, 'EBS for FDF (gp3)')}
       <text class="big" x="${x + 147}" y="300">AZ OUTAGE</text>
       <text class="badge" id="badge${i}" x="${x + 147}" y="440"></text>
       <text class="badge" id="badgeb${i}" x="${x + 147}" y="460"></text>
@@ -215,7 +215,7 @@ function build() {
     if (c.odf || (c.oadp && i === 1)) {
       h += `<rect class="osd" x="${x + 150}" y="150" width="115" height="44" rx="5"/>
       <text class="osdt" x="${ox(i)}" y="170">${c.odf ? 'Ceph OSD' : 'OADP'}</text>
-      <text class="osdt" x="${ox(i)}" y="184" style="font-weight:400">${c.odf ? '(ODF)' : '(Velero)'}</text>`;
+      <text class="osdt" x="${ox(i)}" y="184" style="font-weight:400">${c.odf ? '(FDF)' : '(Velero)'}</text>`;
     }
     if (c.mt) {
       h += `<line class="link" x1="${cc}" y1="225" x2="${cc}" y2="300"/>
@@ -305,13 +305,13 @@ const osdPath = (i, j) => [[ox(i), 194], [ox(i), 262], [ox(j), 262], [ox(j), 194
 const osdToEbs = i => [[ox(i), 194], [cx(i), 328]];
 const podToOsd = (p, o) => [podPt(p), [podPt(p)[0], 262], [ox(o), 262], [ox(o), 194]];
 
-/* ---------------- Scene 2: ODF on EBS ---------------- */
+/* ---------------- Scene 2: FDF on EBS ---------------- */
 async function scene2() {
-  say('<b>1. Setup.</b> ODF runs a Ceph OSD on a worker node in each AZ, and each OSD consumes its own EBS volume. The pool is <i>replica 3</i> with failure domain = <i>zone</i>.');
+  say('<b>1. Setup.</b> FDF runs a Ceph OSD on a worker node in each AZ, and each OSD consumes its own EBS volume. The pool is <i>replica 3</i> with failure domain = <i>zone</i>.');
   for (let i = 0; i < 3; i++) badge(i, 'Replica ' + (i + 1) + ' of 3', 'warn');
   await dwell(4500);
 
-  say('<b>2. A write.</b> The pod writes through ODF (a Ceph RBD volume). The write goes to the primary OSD for that data, which can be in any AZ (drawn here in the same AZ as the pod, for simplicity). The primary sends it to the other two OSDs, and all three write it to their own EBS volumes.');
+  say('<b>2. A write.</b> The pod writes through FDF (a Ceph RBD volume). The write goes to the primary OSD for that data, which can be in any AZ (drawn here in the same AZ as the pod, for simplicity). The primary sends it to the other two OSDs, and all three write it to their own EBS volumes.');
   badge(0, '', ''); badge(1, '', ''); badge(2, '', '');
   await ship([[azx(0) + 128, 172], [azx(0) + 150, 172]], 'w', 500);
   showBlk(0, false);
@@ -347,7 +347,7 @@ async function scene2() {
   badge(2, 'Healthy: 3 of 3 copies', 'good');
   await dwell(3000);
 
-  say('<b>Result:</b> EBS volumes stay AZ-local. ODF stores replicas on EBS volumes in three AZs, so the data survives losing one.');
+  say('<b>Result:</b> EBS volumes stay AZ-local. FDF stores replicas on EBS volumes in three AZs, so the data survives losing one.');
 }
 
 const SCENES = { 2: scene2 };

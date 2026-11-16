@@ -167,14 +167,14 @@ const CFG = {
        note: 'Simplified model: three AZs, one worker node each. An EBS volume lives in one AZ, and AWS replicates it only inside that AZ.' },
 };
 
-// Scene 12 layout: three pods per node, the OSD under the ODF workloads, and two kinds of EBS volume.
+// Scene 12 layout: three pods per node, the OSD under the FDF workloads, and two kinds of EBS volume.
 const MIXED_PODS = [
   ['d0', azx(0) + 18, 118, 'Database', 'Native EBS'],
   ['d1', azx(1) + 18, 118, 'Database', 'Native EBS'],
   ['d2', azx(2) + 18, 118, 'Database', 'Native EBS'],
-  ['lg', azx(0) + 106, 118, 'Legacy app', 'ODF RBD'],
-  ['sh0', azx(0) + 194, 118, 'Shared app', 'ODF CephFS'],
-  ['sh2', azx(2) + 194, 118, 'Shared app', 'ODF CephFS']
+  ['lg', azx(0) + 106, 118, 'Legacy app', 'FDF RBD'],
+  ['sh0', azx(0) + 194, 118, 'Shared app', 'FDF CephFS'],
+  ['sh2', azx(2) + 194, 118, 'Shared app', 'FDF CephFS']
 ];
 function mixedAz(i) {
   const x = azx(i), n = x + 59, o = x + 191;
@@ -187,12 +187,12 @@ function mixedAz(i) {
       <rect class="node" x="${x + 10}" y="88" width="275" height="170" rx="6"/>
       <text class="nodelabel" x="${x + 147}" y="106">ROSA worker node</text>
       <rect class="osd" x="${x + 106}" y="190" width="170" height="44" rx="5"/>
-      <text class="osdt" x="${o}" y="209">Ceph OSD (ODF)</text>
+      <text class="osdt" x="${o}" y="209">Ceph OSD (FDF)</text>
       <text class="osdt" x="${o}" y="224" style="font-weight:400">serves RBD and CephFS</text>
       <line class="link" x1="${n}" y1="162" x2="${n}" y2="318"/>
       <line class="link" x1="${o}" y1="234" x2="${o}" y2="318"/>
       ${cyl(n, 'nb' + i, 'Native EBS (gp3)')}
-      ${cyl(o, 'blk' + i, 'EBS for ODF (gp3)')}
+      ${cyl(o, 'blk' + i, 'EBS for FDF (gp3)')}
       <text class="big" x="${x + 147}" y="300">AZ OUTAGE</text>
       <text class="badge" id="badge${i}" x="${x + 147}" y="440"></text>
       <text class="badge" id="badgeb${i}" x="${x + 147}" y="460"></text>
@@ -215,7 +215,7 @@ function build() {
     if (c.odf || (c.oadp && i === 1)) {
       h += `<rect class="osd" x="${x + 150}" y="150" width="115" height="44" rx="5"/>
       <text class="osdt" x="${ox(i)}" y="170">${c.odf ? 'Ceph OSD' : 'OADP'}</text>
-      <text class="osdt" x="${ox(i)}" y="184" style="font-weight:400">${c.odf ? '(ODF)' : '(Velero)'}</text>`;
+      <text class="osdt" x="${ox(i)}" y="184" style="font-weight:400">${c.odf ? '(FDF)' : '(Velero)'}</text>`;
     }
     if (c.mt) {
       h += `<line class="link" x1="${cc}" y1="225" x2="${cc}" y2="300"/>
@@ -337,7 +337,7 @@ async function scene1() {
   badge(1, 'Pending: volume node affinity conflict', 'bad');
   await dwell(4500);
 
-  say('<b>Result:</b> the data is unavailable until us-east-1a recovers. EBS cannot follow the pod to another AZ. Protecting against this needs something on top of EBS, such as ODF or application-level replication.');
+  say('<b>Result:</b> the data is unavailable until us-east-1a recovers. EBS cannot follow the pod to another AZ. Protecting against this needs something on top of EBS, such as FDF or application-level replication.');
 }
 
 const SCENES = { 1: scene1 };
