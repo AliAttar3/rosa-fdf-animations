@@ -375,7 +375,7 @@ async function scene12() {
   badgeb(0, 'FDF: resynced', 'good'); badgeb(1, 'FDF: healthy, 3 of 3', 'good'); badgeb(2, 'FDF: healthy, 3 of 3', 'good');
   await dwell(4000);
 
-  say('<b>Result:</b> each workload gets the protection that fits it. The distributed database replicates itself on plain EBS and does not need FDF. FDF covers the apps that cannot replicate themselves or need shared files. The cost is running and understanding two storage models side by side.');
+  say('<b>Result:</b> Each workload gets the protection that fits it. The distributed database replicates itself on plain EBS and does not need FDF. FDF covers the apps that cannot replicate themselves or need shared files. The cost is running and understanding two storage models side by side.');
 }
 
 const SCENES = { 12: scene12 };

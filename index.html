@@ -348,7 +348,7 @@ async function scene1() {
   badge(1, 'Pending: volume node affinity conflict', 'bad');
   await dwell(4500);
 
-  say('<b>Result:</b> the data is unavailable until us-east-1a recovers. EBS cannot follow the pod to another AZ. Protecting against this needs something on top of EBS, such as FDF or application-level replication.');
+  say('<b>Result:</b> The data is unavailable until us-east-1a recovers. EBS cannot follow the pod to another AZ. Protecting against this needs something on top of EBS, such as FDF or application-level replication.');
 }
 
 /* ---------------- Scene 2: FDF on EBS ---------------- */
@@ -466,7 +466,7 @@ async function scene12() {
   badgeb(0, 'FDF: resynced', 'good'); badgeb(1, 'FDF: healthy, 3 of 3', 'good'); badgeb(2, 'FDF: healthy, 3 of 3', 'good');
   await dwell(4000);
 
-  say('<b>Result:</b> each workload gets the protection that fits it. The distributed database replicates itself on plain EBS and does not need FDF. FDF covers the apps that cannot replicate themselves or need shared files. The cost is running and understanding two storage models side by side.');
+  say('<b>Result:</b> Each workload gets the protection that fits it. The distributed database replicates itself on plain EBS and does not need FDF. FDF covers the apps that cannot replicate themselves or need shared files. The cost is running and understanding two storage models side by side.');
 }
 
 const SCENES = { 1: scene1, 2: scene2, 12: scene12 };

@@ -337,7 +337,7 @@ async function scene1() {
   badge(1, 'Pending: volume node affinity conflict', 'bad');
   await dwell(4500);
 
-  say('<b>Result:</b> the data is unavailable until us-east-1a recovers. EBS cannot follow the pod to another AZ. Protecting against this needs something on top of EBS, such as FDF or application-level replication.');
+  say('<b>Result:</b> The data is unavailable until us-east-1a recovers. EBS cannot follow the pod to another AZ. Protecting against this needs something on top of EBS, such as FDF or application-level replication.');
 }
 
 const SCENES = { 1: scene1 };
