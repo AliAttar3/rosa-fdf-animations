@@ -13,7 +13,7 @@ What happens to persistent data in an AZ outage on Red Hat OpenShift Service on 
 
 ## IBM Fusion Backup & Restore in action
 
-- `fusion-backup-restore.html`: four tabs: any storage spread across nodes, full / incremental / CBT backups, hub and spokes, and recipes
+- `fusion-backup-restore.html`: four tabs: software-defined backup & restore (any storage, spread across nodes), full / incremental / CBT backups, hub and spokes, and recipes
 
 ## Notes
 
